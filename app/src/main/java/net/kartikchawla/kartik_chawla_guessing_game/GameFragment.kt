@@ -10,6 +10,7 @@ import androidx.navigation.findNavController
 import androidx.lifecycle.ViewModelProvider
 import net.kartikchawla.kartik_chawla_guessing_game.viewModelFactories.GameViewModelFactory
 import net.kartikchawla.kartik_chawla_guessing_game.viewModels.GameViewModel
+import androidx.lifecycle.Observer
 
 
 class GameFragment : Fragment() {
@@ -27,16 +28,30 @@ class GameFragment : Fragment() {
         viewModelFactory = GameViewModelFactory()
         viewModel = ViewModelProvider(this, viewModelFactory).get(GameViewModel::class.java)
 
-        updateScreen()
+        viewModel.incorrectGuesses.observe(viewLifecycleOwner, Observer { newValue ->
+            binding.incorrectGuesses.text = "Incorrect guesses: ${newValue}"
+        })
+
+        viewModel.livesLeft.observe(viewLifecycleOwner, Observer { newValue ->
+            binding.lives.text = "You have ${newValue} lives left."
+        })
+
+        viewModel.secretWordDisplay.observe(viewLifecycleOwner, Observer { newValue ->
+            binding.word.text = newValue
+        })
+
+        viewModel.gameOver.observe(viewLifecycleOwner, Observer { newValue ->
+            if (newValue) {
+                println(viewModel.wonLostMessage())
+                val action = GameFragmentDirections.actionGameFragmentToResultFragment(viewModel.wonLostMessage())
+                println(action)
+                view.findNavController().navigate(directions = action)
+            }
+        })
 
         binding.guessButton.setOnClickListener() {
             viewModel.makeGuess(binding.guess.text.toString().uppercase())
             binding.guess.text = null
-            updateScreen()
-            if(viewModel.isWon() || viewModel.isLost()) {
-                val action = GameFragmentDirections.actionGameFragmentToResultFragment(viewModel.wonLostMessage())
-                view.findNavController().navigate(action)
-            }
         }
 
         return view
@@ -45,11 +60,5 @@ class GameFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
-    }
-
-    fun updateScreen() {
-        binding.word.text = viewModel.secretWordDisplay
-        binding.lives.text = "You have ${viewModel.livesLeft} lives left."
-        binding.incorrectGuesses.text = "Incorrect guesses: ${viewModel.incorrectGuesses}"
     }
 }
